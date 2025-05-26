@@ -27,6 +27,9 @@ final class TypeChecker
         bool $recursive = false,
         string $path = ''
     ): void {
+
+        $expectedType = strtolower(trim($expectedType));
+
         foreach ($array as $key => $value) {
             $currentPath = $path === '' ? (string)$key : $path . "[$key]";
 
@@ -35,22 +38,31 @@ final class TypeChecker
                 continue;
             }
 
-            $isValid = match (true) {
-                class_exists($expectedType), interface_exists($expectedType) => $value instanceof $expectedType,
-                $expectedType === 'int'     => is_int($value),
-                $expectedType === 'string'  => is_string($value),
-                $expectedType === 'float'   => is_float($value),
-                $expectedType === 'bool'    => is_bool($value),
-                $expectedType === 'array'   => is_array($value),
-                $expectedType === 'object'  => is_object($value),
-                $expectedType === 'callable'=> is_callable($value),
-                $expectedType === 'mixed'   => true,
-                default                     => throw new InvalidArgumentException("Unknown type: $expectedType")
-            };
+            $isValid = false;
+
+            if (class_exists($expectedType) || interface_exists($expectedType)) {
+                $isValid = $value instanceof $expectedType;
+            } else {
+                $isValid = match ($expectedType) {
+                    'int'     => is_int($value),
+                    'string'  => is_string($value),
+                    'float'   => is_float($value),
+                    'bool'    => is_bool($value),
+                    'array'   => is_array($value),
+                    'object'  => is_object($value),
+                    'callable'=> is_callable($value),
+                    'mixed'   => true,
+                    default   => throw new InvalidArgumentException("Unknown type: $expectedType")
+                };
+            }
 
             if (!$isValid) {
-                $actualType = get_debug_type($value);
-                throw new InvalidArgumentException("Element at [$currentPath] is of type $actualType, expected $expectedType");
+                throw new InvalidArgumentException("Element at [$currentPath] is of type " . get_debug_type($value) . ", expected $expectedType");
+            }
+
+            if (!$isValid) {
+              //  $actualType = get_debug_type($value);
+              //  throw new InvalidArgumentException("Element at [$currentPath] is of type $actualType, expected $expectedType");
             }
         }
     }
