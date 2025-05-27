@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Selfphp\PhpTypeCheck;
 
-use InvalidArgumentException;
+use Selfphp\PhpTypeCheck\Exception\TypeCheckException;
 
 /**
  * TypeChecker validates array elements against a given type, optionally recursively.
@@ -19,7 +19,7 @@ final class TypeChecker
      * @param bool $recursive        Whether to check nested arrays recursively
      * @param string $path           Internal path for error reporting
      *
-     * @throws InvalidArgumentException if any element does not match the type
+     * @throws TypeCheckException if any element does not match the type
      */
     public static function assertArrayOfType(
         array $array,
@@ -52,19 +52,54 @@ final class TypeChecker
                     'object'  => is_object($value),
                     'callable'=> is_callable($value),
                     'mixed'   => true,
-                    default   => throw new InvalidArgumentException("Unknown type: $expectedType")
+                    default   => throw new TypeCheckException("Unknown type: $expectedType")
                 };
             }
 
-            if (!$isValid) {
-                throw new InvalidArgumentException("Element at [$currentPath] is of type " . get_debug_type($value) . ", expected $expectedType");
-            }
+            $actualType = get_debug_type($value);
 
             if (!$isValid) {
-              //  $actualType = get_debug_type($value);
-              //  throw new InvalidArgumentException("Element at [$currentPath] is of type $actualType, expected $expectedType");
+                throw new TypeCheckException(
+                    "Element at [$currentPath] is of type $actualType, expected $expectedType",
+                    $currentPath,
+                    $expectedType,
+                    $actualType
+                );
             }
         }
+    }
+
+    public static function assertStructure(array $data, array $schema, string $path = ''): void
+    {
+        foreach ($schema as $key => $expectedType) {
+            self::assertStructureKey($data, $key, $expectedType, $path);
+        }
+    }
+
+    private static function assertStructureKey(array $data, string $key, mixed $expectedType, string $path): void
+    {
+        $isOptional = str_ends_with($key, '?');
+        $keyName = $isOptional ? rtrim($key, '?') : $key;
+        $currentPath = $path === '' ? $keyName : $path . "[$keyName]";
+
+        if (!array_key_exists($keyName, $data)) {
+            if ($isOptional) {
+                return;
+            }
+            throw new TypeCheckException("Missing required key: $currentPath", $currentPath, (string) $expectedType, 'missing');
+        }
+
+        $value = $data[$keyName];
+
+        if (is_array($expectedType)) {
+            if (!is_array($value)) {
+                throw new TypeCheckException("Expected array at $currentPath", $currentPath, 'array', get_debug_type($value));
+            }
+            self::assertStructure($value, $expectedType, $currentPath);
+            return;
+        }
+
+        self::assertArrayOfType([$value], $expectedType, false, $currentPath);
     }
 
     /**

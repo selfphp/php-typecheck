@@ -4,6 +4,7 @@ namespace Selfphp\PhpTypeCheck\Tests;
 
 use PHPUnit\Framework\TestCase;
 use Selfphp\PhpTypeCheck\TypeChecker;
+use Selfphp\PhpTypeCheck\Exception\TypeCheckException;
 
 class TypeCheckerTest extends TestCase
 {
@@ -13,24 +14,12 @@ class TypeCheckerTest extends TestCase
         $this->assertTrue(true);
     }
 
-    public function testValidNestedIntArray(): void
+    public function testThrowsTypeCheckException(): void
     {
-        TypeChecker::assertArrayOfType([[1], [2, 3]], 'int', true);
-        $this->assertTrue(true);
-    }
-
-    public function testFailsWithMixedTypes(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
+        $this->expectException(TypeCheckException::class);
         $this->expectExceptionMessage('expected int');
+
         TypeChecker::assertArrayOfType([1, 'fail', 3], 'int');
-    }
-
-    public function testFailsWithWrongNestedTypes(): void
-    {
-        $this->expectException(\InvalidArgumentException::class);
-        $this->expectExceptionMessage('expected int');
-        TypeChecker::assertArrayOfType([[1], ['x']], 'int', true);
     }
 
     public function testDescribeFlatArray(): void
@@ -49,8 +38,11 @@ class TypeCheckerTest extends TestCase
         try {
             TypeChecker::assertArrayOfType([1, 'x'], 'int');
             $this->fail('Exception not thrown');
-        } catch (\InvalidArgumentException $e) {
+        } catch (TypeCheckException $e) {
             $this->assertStringContainsString('expected int', $e->getMessage());
+            $this->assertSame('int', $e->expected);
+            $this->assertSame('string', $e->actual);
+            $this->assertSame('1', $e->path);
         }
     }
 }

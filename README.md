@@ -23,6 +23,14 @@ composer require selfphp/php-typecheck
 
 ---
 
+## Requirements
+
+- PHP >= 8.1
+- Composer
+
+This library uses modern PHP 8.1 features like `readonly` properties.
+
+
 ## ✨ Basic Usage
 
 ### Validate flat arrays
