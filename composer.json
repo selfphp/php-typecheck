@@ -1,6 +1,7 @@
 {
   "name": "selfphp/php-typecheck",
   "description": "Runtime type validation for arrays and structured data. in PHP",
+  "keywords": ["typecheck", "type checking", "validation", "primitive", "assert", "utility", "selfphp"],
   "type": "library",
   "license": "MIT",
   "autoload": {
